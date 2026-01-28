@@ -1,0 +1,11 @@
+-- Encontrar os produtos de uma cotação
+SELECT seqcotacao, seqproduto, codigoean, descricao, embalagem, qtdembalagem
+FROM MRLV_LISTACOTACAO a
+WHERE a.seqcotacao = {numero_da_cotacao}
+-- Pegar com o usuário o número da cotação
+
+
+-- Descobrir quais são os fornecedores na cotação
+SELECT seqataccotacao, seqatacadista
+FROM mrl_ataccotado m
+WHERE m.seqataccotacao = {numero_da_cotacao}
