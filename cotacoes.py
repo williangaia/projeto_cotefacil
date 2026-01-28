@@ -44,19 +44,24 @@ class CriarCSV():
     def criar_esqueleto(self):
         try:
             with open(self.caminho_esqueleto, 'w', newline='', encoding='utf-8') as arquivo:
-                writer = csv.writer(arquivo, delimiter=',')
+                writer = csv.writer(arquivo, delimiter='\t')
                 #Primeira linha - vazia
                 writer.writerow(['','','','','',''])
 
                 #Segunda linha - Número da cotação
                 writer.writerow([f'Cotação: {self.numero_cotacao}','','','','',''])
 
-                #Terceira linha - CENTRAL DE COMPRAS
+                #Terceira Linha - CENTRAL-COMPRAS
+                writer.writerow(['CENTRAL-COMPRAS','','','','',''])
+
+                #Quarta linha - colunas
                 writer.writerow(['Seq','EAN','Descrição','Emb.','Prazo','Vlr. Custo' ])
             
             print(f"Esqueleto salvo em {self.diretorio}")
         except Exception as e:
             print(f"Erro ao criar esqueleto do CSV: {e}")
+        
+    
 
 
 
