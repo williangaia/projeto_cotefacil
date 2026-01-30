@@ -1,11 +1,16 @@
 -- Encontrar os produtos de uma cotação
-SELECT seqcotacao, seqproduto, codigoean, descricao, embalagem, qtdembalagem
-FROM MRLV_LISTACOTACAO a
-WHERE a.seqcotacao = {numero_da_cotacao}
+SELECT SEQCOTACAO, SEQPRODUTO, CODIGOEAN, DESCRICAO, EMBALAGEM, QTDEMBALAGEM
+FROM MRLV_LISTACOTACAO C
+WHERE C.SEQCOTACAO = {numero_cotacao}
 -- Pegar com o usuário o número da cotação
 
-
--- Descobrir quais são os fornecedores na cotação
-SELECT seqataccotacao, seqatacadista
-FROM mrl_ataccotado m
-WHERE m.seqataccotacao = {numero_da_cotacao}
+-- UNIR AS TABELAS ONDE TEM O NUMERO DO ATACADISTA E O CNPJ_COMPLETO
+-- CONDIÇÃO: SEQPESSOA = SEQATACADISTA
+SELECT 
+    M.SEQATACCOTACAO,
+    M.SEQATACADISTA,
+    CONCAT(LPAD(P.NROCGCCPF, 12, '0'), LPAD(P.DIGCGCCPF, 2, '0')) AS CNPJ_COMPLETO,
+    P.NOMERAZAO
+FROM MRL_ATACCOTADO M
+INNER JOIN GE_PESSOA P ON P.SEQPESSOA = M.SEQATACADISTA
+WHERE M.SEQATACCOTACAO = 202280

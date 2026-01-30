@@ -1,5 +1,4 @@
 import snorte
-import time
 from pathlib import Path
 import csv
 
@@ -67,7 +66,7 @@ class CriarCSV():
                     descricao = produto['DESCRICAO']
                     embalagem = f"{produto['EMBALAGEM']}-{produto['QTDEMBALAGEM']}"
                     prazo = 30
-                    valor_custo = '""'
+                    valor_custo = ''
                     writer.writerow([seq, ean, descricao, embalagem, prazo, valor_custo])
 
             #depois tirar esse print - só para teste
@@ -84,9 +83,9 @@ class CriarCSV():
         cursor = self.conexao.conexao.cursor
 
         consulta_produtos_cotacao = f"""
-        SELECT seqcotacao, seqproduto, codigoean, descricao, embalagem, qtdembalagem
-        FROM MRLV_LISTACOTACAO a
-        WHERE a.seqcotacao = {self.numero_cotacao}
+        SELECT SEQCOTACAO, SEQPRODUTO, CODIGOEAN, DESCRICAO, EMBALAGEM, QTDEMBALAGEM
+        FROM MRLV_LISTACOTACAO C
+        WHERE C.SEQCOTACAO = {self.numero_cotacao}
         """
 
         cursor.execute(consulta_produtos_cotacao)
@@ -101,14 +100,13 @@ class CriarCSV():
         return produtos
 
 
-
 # BLOCO PRINCIPAL
 
 if __name__ == "__main__":
     try:
         conexao = ConexaoBD()
         if conexao.verifica_conexao():
-            esqueleto = CriarCSV(202261, conexao)
+            esqueleto = CriarCSV(202280, conexao)
             esqueleto.criar_esqueleto()
         else:
             print("Falha na conexão com banco de dados")
