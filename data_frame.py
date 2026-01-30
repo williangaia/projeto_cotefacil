@@ -90,6 +90,57 @@ class CotacaoRepository():
 
         return df
 
+class TxtCotacaoParser:
+    def __init__(self, caminho_arquivo: Path):
+        self.caminho_arquivo = caminho_arquivo
+
+    def extrair_precos(self) -> dict:
+        precos_por_fornecedor = {}
+
+        cnpj_atual = None
+
+        with open(self.caminho_arquivo, encoding="utf-8") as arquivo:
+            for linha in arquivo:
+                linha = linha.strip()
+                if not linha:
+                    continue
+
+                campos = linha.split(";")
+                tipo = campos[0]
+
+                # Ignorar primeira linha
+                if tipo == "1":
+                    continue
+
+                # CNPJ do fornecedor
+                if tipo == "2":
+                    cnpj_atual = campos[1]
+                    precos_por_fornecedor[cnpj_atual] = {}
+                    continue
+
+                # Produtos do fornecedor
+                if tipo == "3" and cnpj_atual:
+                    ean = campos[1]
+                    preco = campos[4]
+                    precos_por_fornecedor[cnpj_atual][ean] = preco
+
+                # Acabou o fornecedor
+                if tipo == "4":
+                    cnpj_atual = None
+
+                # Fim do arquivo
+                if tipo == "5":
+                    break
+
+        return precos_por_fornecedor
+    
+    @staticmethod
+    def montar_df_cotacao_fornecedor(df_cotacao: pd.DataFrame, precos_fornecedor: dict) -> pd.DataFrame:
+        df = df_cotacao.copy()
+
+        df["Vlr. Custo"] = df["EAN"].map(precos_fornecedor).fillna("0,00")
+
+        return df
 
 # BLOCO PRINCIPAL
 
@@ -106,6 +157,22 @@ if __name__ == "__main__":
 
             print("\nAtacadistas: ")
             print(df_atacadistas.head())
+
+            diretorio_pai = Path(__file__).parent
+            arquivo = Path("PEDIDO_13808028_29012026_0904532720.txt")
+            caminho_txt = diretorio_pai / arquivo
+
+            parser = TxtCotacaoParser(caminho_txt)
+            precos = parser.extrair_precos()
+
+            for cnpj, precos_fornecedor in precos.items():
+                df_fornecedor = TxtCotacaoParser.montar_df_cotacao_fornecedor(
+                    df_cotacao,
+                    precos_fornecedor
+                )
+
+                print(f"\nFornecedor {cnpj}")
+                print(df_fornecedor.head())
             
         else:
             print("Falha na conexão com banco de dados")
