@@ -170,7 +170,9 @@ class CotacaoExporter:
     @staticmethod ####
     def salvar_cotacao_csv(df: pd.DataFrame, caminho: Path, numero_cotacao: int):
 
-        with open(caminho, mode="w", newline="", encoding="utf-8") as arquivo:
+        
+
+        with open(caminho, mode="w", newline="", encoding="utf-8-sig") as arquivo:
             writer = csv.writer(arquivo)
 
             # Cabeçalho Consinco
@@ -181,66 +183,12 @@ class CotacaoExporter:
 
             for _, row in df.iterrows():
                 writer.writerow(row.tolist())
-    
+    """
     @staticmethod ####
     def salvar_cotacao_xlsx(caminho: Path, dfs_por_fornecedor: dict[str, pd.DataFrame]):
 
         with pd.ExcelWriter(caminho, engine="xlsxwriter") as writer:
             for nome_razao, df in dfs_por_fornecedor.items():
                 aba = nome_razao[:31]
-                df.to_excel(writer, sheet_name=aba, index=False) ####
-
-
-# BLOCO PRINCIPAL
-
-if __name__ == "__main__":
-    
-    conexao = ConexaoBD()
-
-    try:
-        if not conexao.verifica_conexao():
-            raise RuntimeError("Falha na conexão com o banco!")
-        
-        repositorio = CotacaoRepository(202280, conexao)
-        df_cotacao = repositorio.buscar_produtos_cotacao()
-        df_atacadista = repositorio.buscar_atacadistas_cotacao()
-
-        parser = TxtCotacaoParser(
-            Path(__file__).parent / "PEDIDO_13808028_29012026_0904532720.txt"
-        )
-        precos = parser.extrair_precos()
-
-        dfs_xlsx = {}
-
-        for _, atac in df_atacadista.iterrows():
-            cnpj = atac["cnpj_completo"]
-            nome_razao = atac["nomerazao"]
-
-            df_fornecedor = CotacaoDataFrameService.montar_df_cotacao_fornecedor(
-                df_cotacao,
-                precos.get(cnpj, {})
-            )
-            
-            df_final = CotacaoDataFrameService.preparar_df_final(df_fornecedor)
-
-            caminho_csv = (
-                Path(__file__).parent / f"Cotação{repositorio.numero_cotacao}_{nome_razao}.csv"
-            )
-
-            CotacaoExporter.salvar_cotacao_csv(
-                df_final,
-                caminho_csv,
-                repositorio.numero_cotacao
-            )
-
-            dfs_xlsx[nome_razao] = df_final
-
-        caminho_xlsx = (
-            Path(__file__).parent / f"Cotacao{repositorio.numero_cotacao}.xlsx"
-        )
-
-        CotacaoExporter.salvar_cotacao_xlsx(caminho_xlsx, dfs_xlsx)
-        
-    finally:
-        if 'conexao' in locals():
-            conexao.fechar_conexao()
+                df.to_excel(writer, sheet_name=aba, index=False)
+    """
