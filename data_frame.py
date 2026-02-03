@@ -173,16 +173,30 @@ class CotacaoExporter:
         
 
         with open(caminho, mode="w", newline="", encoding="utf-8-sig") as arquivo:
-            writer = csv.writer(arquivo)
+            writer = csv.writer(arquivo, delimiter=";")
 
             # Cabeçalho Consinco
-            writer.writerow(["", "", "", "", "", ""])
-            writer.writerow([f"Cotação: {numero_cotacao}", "", "", "", "", ""])
-            writer.writerow(["CENTRAL-COMPRAS", "", "", "", "", ""])
-            writer.writerow(df.columns.tolist())
+            writer.writerow([])
+            writer.writerow([f"Cotação: {numero_cotacao}"])
+            writer.writerow(["CENTRAL-COMPRAS"])
+            writer.writerow([
+                "Seq",
+                "EAN",
+                "Descrição",
+                "Emb.",
+                "Prazo",
+                "Vlr. Custo"
+            ])
 
             for _, row in df.iterrows():
-                writer.writerow(row.tolist())
+                writer.writerow([
+                    row["seq"],
+                    row["ean"],
+                    row["descricao"],
+                    row["Emb."],
+                    row["Prazo"],
+                    row["Vlr. Custo"]
+                ])
     
     @staticmethod ####
     def salvar_cotacao_xlsx(caminho: Path, dfs_por_fornecedor: dict[str, pd.DataFrame]):
