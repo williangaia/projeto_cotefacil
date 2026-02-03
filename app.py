@@ -49,8 +49,8 @@ class App(ctk.CTk):
 
         threading.Thread(
             target=self._executar_processamento,
-            args=(numero, pasta_saida),
-            daemon=True
+            args=(numero, pasta_saida)
+            #daemon=True
         ).start()
 
     def _executar_processamento(self, numero, pasta_saida):

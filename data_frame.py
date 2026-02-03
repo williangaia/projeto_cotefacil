@@ -167,7 +167,7 @@ class CotacaoDataFrameService:
 
 class CotacaoExporter:
 
-    @staticmethod ####
+    @staticmethod ###
     def salvar_cotacao_csv(df: pd.DataFrame, caminho: Path, numero_cotacao: int):
 
         
@@ -183,12 +183,15 @@ class CotacaoExporter:
 
             for _, row in df.iterrows():
                 writer.writerow(row.tolist())
-    """
+    
     @staticmethod ####
     def salvar_cotacao_xlsx(caminho: Path, dfs_por_fornecedor: dict[str, pd.DataFrame]):
+
+        print("Gerando XLSX em:", caminho)
 
         with pd.ExcelWriter(caminho, engine="xlsxwriter") as writer:
             for nome_razao, df in dfs_por_fornecedor.items():
                 aba = nome_razao[:31]
                 df.to_excel(writer, sheet_name=aba, index=False)
-    """
+        
+        print("XLSX gerado com sucesso")
