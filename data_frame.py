@@ -205,7 +205,17 @@ class CotacaoExporter:
 
         with pd.ExcelWriter(caminho, engine="xlsxwriter") as writer:
             for nome_razao, df in dfs_por_fornecedor.items():
+
+                df_export = df.rename(columns={
+                    "seq": "Seq",
+                    "ean": "EAN",
+                    "descricao": "Descrição",
+                    "Emb.": "Emb.",
+                    "Prazo": "Prazo",
+                    "Vlr. Custo": "Vlr. Custo"
+                })
+
                 aba = nome_razao[:31]
-                df.to_excel(writer, sheet_name=aba, index=False)
+                df_export.to_excel(writer, sheet_name=aba, index=False)
         
         print("XLSX gerado com sucesso")
