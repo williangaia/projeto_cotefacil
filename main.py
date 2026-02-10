@@ -1,3 +1,4 @@
+# main.py
 from data_frame import ConexaoBD
 from controlador import CotacaoController
 from app import App
@@ -9,7 +10,6 @@ try:
         raise RuntimeError("Falha na conexão com o banco.")
     
     controller = CotacaoController(conexao)
-
     app = App(controller)
     app.mainloop()
 

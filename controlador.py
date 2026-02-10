@@ -1,5 +1,6 @@
+# controlador.py - CONTROLLER
 from pathlib import Path
-from data_frame import CotacaoRepository, TxtCotacaoParser, CotacaoDataFrameService, CotacaoExporter
+from data_frame import CotacaoRepository, ProcessadorFactory
 import re
 
 class CotacaoController:
@@ -8,80 +9,99 @@ class CotacaoController:
         self.conexao = conexao
 
     def nome_arquivo_seguro(self, texto: str) -> str:
-        # Remove caracteres invisíveis (quebra de linha, tab, etc)
         texto = re.sub(r"[\r\n\t]", " ", texto)
-
-        # Remove caracteres inválidos para Windows
         texto = re.sub(r"[\\/:*?\"<>|]", "", texto)
-
-        # Normaliza espaços
         texto = re.sub(r"\s+", " ", texto).strip()
-
-        # Remove ponto ou espaço no final (Windows não aceita)
         texto = texto.rstrip(". ")
-
         return texto
-
 
     def processar_cotacao(
         self,
         numero_cotacao: int,
-        caminho_txt: Path,
-        pasta_saida: Path
+        tipo_layout: str,  # "consinco" ou "cotefacil"
+        caminho_txt: Path = None,
+        pasta_saida: Path = None
     ):
+        # Validações básicas
+        if tipo_layout == "consinco" and not caminho_txt:
+            raise ValueError("Layout Consinco requer arquivo TXT")
+        
+        if not pasta_saida:
+            pasta_saida = Path.cwd() / "output"
+        
         pasta_saida = Path(pasta_saida).resolve()
         pasta_saida.mkdir(parents=True, exist_ok=True)
 
-
-        if not caminho_txt.exists():
-            raise FileNotFoundError("Arquivo TXT não encontrado")
-
-        if not pasta_saida.exists():
-            raise FileNotFoundError("Pasta de saída inválida")
-
-        
+        # Cria repositório
         repositorio = CotacaoRepository(numero_cotacao, self.conexao)
+        
+        # Factory para criar o processador correto
+        processador = ProcessadorFactory.criar_processador(tipo_layout)
+        
+        # Processa de acordo com a estratégia
+        if tipo_layout == "consinco":
+            dados_processados = processador.processar(
+                repositorio, 
+                caminho_txt=caminho_txt
+            )
+            self._exportar_layout_consinco(
+                dados_processados, 
+                numero_cotacao, 
+                pasta_saida
+            )
+        else:  # cotefacil
+            dados_processados = processador.processar(repositorio)
+            self._exportar_layout_cotefacil(
+                dados_processados, 
+                numero_cotacao, 
+                pasta_saida
+            )
 
-        df_cotacao = repositorio.buscar_produtos_cotacao()
-        df_atacadistas = repositorio.buscar_atacadistas_cotacao()
-
-        parser = TxtCotacaoParser(caminho_txt)
-        precos = parser.extrair_precos()
-
+    def _exportar_layout_consinco(self, dados, numero_cotacao: int, pasta_saida: Path):
+        resultados = dados['resultados']
+        df_atacadistas = dados['df_atacadistas']
+        
         dfs_xlsx = {}
-
+        
         for _, atac in df_atacadistas.iterrows():
-            cnpj = atac["cnpj_completo"]
             nome_razao = atac["nomerazao"]
-
-            df_fornecedor = CotacaoDataFrameService.montar_df_cotacao_fornecedor(
-                df_cotacao,
-                precos.get(cnpj, {})
-            )
-
-            df_final = CotacaoDataFrameService.preparar_df_final(df_fornecedor)
-
+            info = resultados.get(nome_razao)
+            
+            if not info:
+                continue
+                
             nome_razao_limpo = self.nome_arquivo_seguro(nome_razao)
-
-            caminho_csv = (
-                pasta_saida / f"Cotação{repositorio.numero_cotacao}_{nome_razao_limpo}.csv"
+            caminho_csv = pasta_saida / f"Cotação{numero_cotacao}_{nome_razao_limpo}.csv"
+            
+            # Exporta CSV
+            exporter_csv = ProcessadorFactory.criar_exporter("consinco_csv")
+            exporter_csv.exportar(
+                {'df': info['df']}, 
+                caminho_csv, 
+                numero_cotacao=numero_cotacao
+            )
+            
+            dfs_xlsx[nome_razao] = info['df']
+        
+        # Exporta XLSX
+        if dfs_xlsx:
+            caminho_xlsx = pasta_saida / f"Cotacao{numero_cotacao}.xlsx"
+            exporter_xlsx = ProcessadorFactory.criar_exporter("consinco_xlsx")
+            exporter_xlsx.exportar(
+                {'resultados': {k: {'df': v} for k, v in dfs_xlsx.items()}}, 
+                caminho_xlsx
             )
 
-            caminho_csv.parent.mkdir(parents=True, exist_ok=True)
-
-            ##TESTE
-            print("NOME ORIGINAL:", repr(nome_razao))
-            print("NOME LIMPO:", repr(nome_razao_limpo))
-            print("CAMINHO:", repr(str(caminho_csv)))
-
-
-            CotacaoExporter.salvar_cotacao_csv(
-                df_final,
-                caminho_csv,
-                repositorio.numero_cotacao
-            )
-
-            dfs_xlsx[nome_razao] = df_final
-
-        caminho_xlsx = pasta_saida / f"Cotacao{numero_cotacao}.xlsx"
-        CotacaoExporter.salvar_cotacao_xlsx(caminho_xlsx, dfs_xlsx)
+    def _exportar_layout_cotefacil(self, dados, numero_cotacao: int, pasta_saida: Path):
+        df_cotacao = dados['df_cotacao']
+        
+        # Exporta único CSV sem cabeçalho
+        caminho_csv = pasta_saida / f"Cotacao{numero_cotacao}_cotefacil.csv"
+        
+        exporter = ProcessadorFactory.criar_exporter("cotefacil_csv")
+        exporter.exportar(
+            {'df_cotacao': df_cotacao}, 
+            caminho_csv
+        )
+        
+        print(f"Arquivo gerado: {caminho_csv}")
