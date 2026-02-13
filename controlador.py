@@ -93,15 +93,18 @@ class CotacaoController:
             )
 
     def _exportar_layout_cotefacil(self, dados, numero_cotacao: int, pasta_saida: Path):
-        df_cotacao = dados['df_cotacao']
-        
-        # Exporta único CSV sem cabeçalho
-        caminho_csv = pasta_saida / f"Cotacao{numero_cotacao}_cotefacil.csv"
-        
+
+        resultados = dados["resultados"]
+
         exporter = ProcessadorFactory.criar_exporter("cotefacil_csv")
-        exporter.exportar(
-            {'df_cotacao': df_cotacao}, 
-            caminho_csv
-        )
-        
-        print(f"Arquivo gerado: {caminho_csv}")
+
+        for nroempresa, df_filial in resultados.items():
+
+            caminho_csv = pasta_saida / f"Cotacao{numero_cotacao}_Loja{nroempresa}.csv"
+
+            exporter.exportar(
+                {"df_cotacao": df_filial},
+                caminho_csv
+            )
+
+            print(f"Arquivo gerado: {caminho_csv}")

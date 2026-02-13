@@ -203,4 +203,7 @@ class TelaCotefacil(TelaBase):
             )
             self.after(0, lambda: messagebox.showinfo("Sucesso", "CSV Cotefácil gerado com sucesso"))
         except Exception as e:
-            super()._executar_processamento(numero_cotacao, pasta_saida)
+            import traceback
+            erro = traceback.format_exc()
+            print(erro)
+            self.after(0, lambda: messagebox.showerror("Erro", str(e)))

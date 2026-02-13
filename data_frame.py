@@ -85,21 +85,35 @@ class CotacaoRepository(BaseRepository):
         """
         return self._executar_consulta(query)
     
-    def buscar_cotacao_simples(self) -> pd.DataFrame:
-        """Nova query para layout Cotefácil"""
+    def buscar_cotacao_cotefacil_por_filial(self) -> pd.DataFrame:
         query = f"""
-        SELECT 
-            P.CODIGOEAN AS EAN, 
-            P.QTDSOLICITADA AS QUANTIDADE, 
-            P.CODIGOEAN AS EAN2, 
-            P.DESCRICAO, 
-            D.MARCA 
-        FROM MRLV_LISTACOTACAO P 
-        INNER JOIN MAP_PRODUTO F ON P.SEQPRODUTO = F.SEQPRODUTO 
-        INNER JOIN MAP_FAMILIA M ON F.SEQFAMILIA = M.SEQFAMILIA 
-        INNER JOIN MAP_MARCA D ON M.SEQMARCA = D.SEQMARCA 
-        WHERE P.SEQCOTACAO = {self.numero_cotacao}
+        SELECT
+            A.NROEMPRESA,
+            (Select max(c.codacesso)
+            From map_prodcodigo c
+            Where c.seqproduto = a.seqproduto
+                and c.tipcodigo = 'E'
+                and c.qtdembalagem = 1) AS EAN,
+
+            Trunc(a.qtdpedida) AS QUANTIDADE,
+
+            (Select max(c.codacesso)
+            From map_prodcodigo c
+            Where c.seqproduto = a.seqproduto
+                and c.tipcodigo = 'E'
+                and c.qtdembalagem = 1) AS EAN2,
+
+            p.desccompleta as DESCRICAO,
+            a.marca
+
+        FROM mac_gercompraitem a,
+            map_produto p
+
+        WHERE a.seqproduto = p.seqproduto
+        and a.qtdpedida <> 0
+        and a.seqgercompra = {self.numero_cotacao}
         """
+
         return self._executar_consulta(query)
 
 class TxtCotacaoParser:
@@ -198,18 +212,32 @@ class EstrategiaConsinco(EstrategiaProcessamento):
 
 class EstrategiaCotefacil(EstrategiaProcessamento):
     def processar(self, repositorio: CotacaoRepository, **kwargs) -> dict:
-        df_cotacao = repositorio.buscar_cotacao_simples()
-        
-        # Garante que EAN aparece duas vezes (como especificado)
-        if 'ean2' in df_cotacao.columns:
-            # Renomear para ter duas colunas EAN
-            df_cotacao = df_cotacao.rename(columns={'ean2': 'ean_duplicado'})
-            # Reordenar colunas: EAN, QUANTIDADE, EAN, DESCRICAO, MARCA
-            df_cotacao = df_cotacao[['ean', 'quantidade', 'ean_duplicado', 'descricao', 'marca']]
-        
+
+        df = repositorio.buscar_cotacao_cotefacil_por_filial()
+
+        if df.empty:
+            raise ValueError("Nenhum dado encontrado para esta cotação.")
+
+        resultados = {}
+
+        # Agrupar por filial
+        for nroempresa, df_filial in df.groupby("nroempresa"):
+
+            df_filial = df_filial.copy()
+
+            # Manter somente as colunas do layout
+            df_filial = df_filial[
+                ["ean", "quantidade", "ean2", "descricao", "marca"]
+            ]
+
+            # Garantir ordem correta
+            df_filial = df_filial.rename(columns={"ean2": "ean_duplicado"})
+
+            resultados[nroempresa] = df_filial
+
         return {
-            'tipo': 'cotefacil',
-            'df_cotacao': df_cotacao
+            "tipo": "cotefacil",
+            "resultados": resultados
         }
 
 # ============ EXPORTERS ============
